@@ -30,7 +30,14 @@ class DataInterface:
     def data_by_county(self, year: int):
         """ Returns the data with county as index. Specify the year. """
         data = self.select_year(year=year)
-        return data.set_index("RegioS")
+        return data.set_index('RegioS')
+
+    def county_yearly(self, county_code: str, variable: str):
+        """ Returns a DataFrame based on the county_code and the variable on
+        over multiple years. """
+        cols=['RegioS', 'Perioden', variable]
+        return self.data[cols].loc[
+            (self.data['KoppelvariabeleRegioCode_306'] == county_code)]
 
 
 data = DataInterface()

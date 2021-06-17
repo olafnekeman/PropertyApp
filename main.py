@@ -8,7 +8,11 @@ import json
 import pandas as pd
 
 from support.constants import MAPKEY, BASEPATH
+from support.functions import col_to_str
 from data.interface import data
+from ui.runtime_vars import RuntimeVars
+from ui.side_bar import Subplot
+from ui.choromap import ChoroMap
 
 token = MAPKEY
 
@@ -20,59 +24,109 @@ app = dash.Dash(__name__)
 server = app.server
 
 # --- END ---- #
-# --- LOADING DATA --- #
 
-fp = BASEPATH + "/data/geodata/gemeentegrenzen_{}.geojson".format(2019)
-with open(fp) as f:
-    geojson = json.load(f)
-lst = []
-for i, val in enumerate(geojson['features']):
-    lst.append([val['properties']['statcode'], i, i + 1, i + 2])
+# --- RUNTIME VARIABLES --- #
 
-df = data.data_by_county(year=2019)
-candidates = df.columns[98:102]
+vars = RuntimeVars()
+
+choromap = ChoroMap(runtime_vars=vars)
+sub_plot_1 = Subplot(data=data, runtime_vars=vars, show_legend=True)
+sub_plot_2 = Subplot(data=data, runtime_vars=vars)
+sub_plot_3 = Subplot(data=data, runtime_vars=vars)
 
 # --- TEXTS ---- #
 
 intro_text = "Intro, welcome!"
+# Options
+# --- LOADING DATA --- #
+
+df = data.data_by_county(year=vars.year)
+map_var_options = [dict(label=col_to_str(i), value=i) for i in
+                   data.data.columns[4: 200]]
+
+var_options = [dict(label=col_to_str(i), value=i) for i in
+               data.data.columns[4: 200]]
+year_options = [dict(label=i, value=i) for i in
+                data.data['Perioden'].unique()]
 # --- LAYOUT --- #
 
 app.layout = html.Div(
     children=[
         dcc.Store(id="cluster-data-store", data={}),
         # Banner
-        html.P("Candidate:"),
-        dcc.RadioItems(
-            id='candidate',
-            options=[{'value': x, 'label': x}
-                     for x in candidates],
-            value=candidates[0],
-            labelStyle={'display': 'inline-block'}
-        ),
+
         html.Div(
             [
                 html.Div(
                     children=[
-                        html.Div(id="intro-text",
-                                 children=dcc.Markdown(intro_text)),
                         html.P("Housing data"),
                         html.Hr(),
+                        html.Div(
+                            children=[
+                                dcc.Dropdown(
+                                    id="map_year",
+                                    options=year_options,
+                                    value=year_options[-2]['value'],
+                                    className="four columns named-card",
+                                ),
+                                dcc.Dropdown(
+                                    id='map_var',
+                                    options=map_var_options,
+                                    value=map_var_options[0]['value'],
+                                    className="four columns named-card",
+                                ),
+                            ],
+                        ),
                         dcc.Graph(id="choropleth",
-                                  figure=px.scatter()
-),
+                                  figure=choromap.fig,
+                                  className="twelve columns named-card",
+                                  ),
                     ],
                     className="eight columns named-card",
                 ),
-                # Categorical properties by cluster e.g (property type stacked bar)
+
+                # Side bar with yearly graphs.
                 html.Div(
                     children=[
                         html.P("Data by year"),
                         html.Hr(),
-                        dcc.Graph(id="housing_price", figure=px.scatter()
-),
+                        dcc.Dropdown(
+                            id="side_bar_var_1",
+                            options=var_options,
+                            value=var_options[0]['value'],
+                            className="eight columns named-card",
+                        ),
+                        dcc.Graph(
+                            id="yearly_data_1",
+                            figure=sub_plot_1.fig,
+                            className="twelve columns named-card",),
+                        html.Hr(),
+                        dcc.Dropdown(
+                            id="side_bar_var_2",
+                            options=var_options,
+                            value=var_options[0]['value'],
+                            className="eight columns named-card",
+                        ),
+                        dcc.Graph(
+                            id="yearly_data_2",
+                            figure=sub_plot_2.fig,
+                            className="twelve columns named-card",),
+                        html.Hr(),
+                        dcc.Dropdown(
+                            id="side_bar_var_3",
+                            options=var_options,
+                            value=var_options[0]['value'],
+                            className="eight columns named-card",
+                        ),
+                        dcc.Graph(
+                            id="yearly_data_3",
+                            figure=sub_plot_3.fig,
+                            className="twelve columns named-card",
+                        ),
                     ],
                     className="four columns named-card",
                 ),
+
             ],
             className="twelve columns",
         ),
@@ -80,23 +134,74 @@ app.layout = html.Div(
     className="container twelve columns",
 )
 
+
 # --- CALLBACKS --- #
 @app.callback(
     Output("choropleth", "figure"),
-    [Input("candidate", "value")])
-def display_choropleth(candidate):
-    fig = px.choropleth_mapbox(
-        df, geojson=geojson, color=candidate,
-        locations="KoppelvariabeleRegioCode_306",
-        featureidkey="properties.statcode",
-        center={"lat": 52.09, "lon": 5.12}, zoom=6,
-        # range_color=[0, 6500]
-    )
-    fig.update_layout(
-        margin={"r":0,"t":0,"l":0,"b":0},
-        mapbox_accesstoken=token)
+    [Input("map_var", "value"),
+     Input("map_year", "value"),
+     Input("choropleth", "clickData")])
+def display_choropleth(map_var, map_year, clickData):
+    if map_var != vars.map_var:
+        # Update the variable on the map
+        vars.map_var = map_var
+        choromap.update_map_data()
+    elif map_year != vars.year:
+        vars.year = map_year
+        choromap.update_map_data()
+    elif clickData:
+        # Update the selected regions
+        if clickData is not None:
+            location = clickData['points'][0]['location']
 
-    return fig
+            if location not in vars.selections:
+                vars.selections.add(location)
+            else:
+                vars.selections.remove(location)
+        choromap.update_selection()
+    return choromap.fig
+
+
+@app.callback(
+    Output("yearly_data_1", "figure"),
+    [Input("side_bar_var_1", "value"),
+     Input("choropleth", "clickData")]
+)
+def update_side_bar_plot_1(side_bar_var_1, clickData):
+    if side_bar_var_1 != sub_plot_1.subplot_var:
+        sub_plot_1.subplot_var = side_bar_var_1
+    else:
+        pass
+        # sub_plot_1.update_traces()
+    return sub_plot_1.plot()
+
+
+@app.callback(
+    Output("yearly_data_2", "figure"),
+    [Input("side_bar_var_2", "value"),
+     Input("choropleth", "clickData")]
+)
+def update_side_bar_plot_2(side_bar_var_2, clickData):
+    if side_bar_var_2 != sub_plot_2.subplot_var:
+        sub_plot_2.subplot_var = side_bar_var_2
+    else:
+        pass
+        # sub_plot_2.update_traces()
+    return sub_plot_2.plot()
+
+
+@app.callback(
+    Output("yearly_data_3", "figure"),
+    [Input("side_bar_var_3", "value"),
+     Input("choropleth", "clickData")]
+)
+def update_side_bar_plot_3(side_bar_var_3, clickData):
+    if side_bar_var_3 != sub_plot_3.subplot_var:
+        sub_plot_3.subplot_var = side_bar_var_3
+    else:
+        pass
+        # sub_plot_3.update_traces()
+    return sub_plot_3.plot()
 
 
 if __name__ == "__main__":
