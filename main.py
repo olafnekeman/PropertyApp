@@ -145,10 +145,8 @@ def display_choropleth(map_var, map_year, clickData):
     if map_var != vars.map_var:
         # Update the variable on the map
         vars.map_var = map_var
-        choromap.update_map_data()
     elif map_year != vars.year:
         vars.year = map_year
-        choromap.update_map_data()
     elif clickData:
         # Update the selected regions
         if clickData is not None:
@@ -159,6 +157,8 @@ def display_choropleth(map_var, map_year, clickData):
             else:
                 vars.selections.remove(location)
         choromap.update_selection()
+    choromap.update_map_data()
+
     return choromap.fig
 
 
