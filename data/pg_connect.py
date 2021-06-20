@@ -3,17 +3,16 @@
 
 # import the sql and connect libraries for psycopg2
 from psycopg2 import sql, connect
-
 # create a global string for the PostgreSQL db name
-db_name = "de49s33kdavj49"
+db_name = "d91vcqu2u3tnnj"
 
 try:
     # declare a new PostgreSQL connection object
     conn = connect(
         dbname=db_name,
-        user="kiufnyzelvojho",
-        host="ec2-176-34-105-15.eu-west-1.compute.amazonaws.com",
-        password="331c381b46dc08c8ac85cdf5fd022c4abbf7424baa66cbeec6589739a8ec2702"
+        user="xmukfffjuhnkpd",
+        host="ec2-54-74-77-126.eu-west-1.compute.amazonaws.com",
+        password="fa8f9d63a1edccac6ee899618064398630530f532923c311cddd61b5022f91be"
     )
 
     # print the connection if successful
