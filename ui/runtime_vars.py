@@ -3,5 +3,5 @@
 
 class RuntimeVars:
     year = 2019
-    map_var = "GemiddeldeWoningwaarde_99"
+    map_var = "gemiddelde_woningwaarde_99"
     selections = set()

@@ -4,7 +4,7 @@ import json
 import plotly.express as px
 import plotly.graph_objects as go
 
-from data.interface import data
+from data.interface import db
 from support.constants import BASEPATH
 from ui.runtime_vars import RuntimeVars
 
@@ -14,14 +14,15 @@ class ChoroMap:
         self.vars = runtime_vars
         self.__year = self.vars.year
         self.__geo_json = self.get_geojson(year=self.vars.year)
-        self.__data = data.data_by_county(year=self.vars.year)
+        self.__data = db.get_region_data(columns=self.vars.map_var,
+                                         year=self.vars.year)
         self.__district_lookup = self.get_district_lookup()
         self.fig = go.FigureWidget(px.choropleth_mapbox())
         self.fig.update_layout(mapbox_style="carto-positron",
-                          mapbox_zoom=6,
-                          mapbox_center={"lat": 52.09, "lon": 5.12},
-                          margin={"r": 0, "t": 0, "l": 0, "b": 0},
-                          uirevision='constant')
+                               mapbox_zoom=6,
+                               mapbox_center={"lat": 52.09, "lon": 5.12},
+                               margin={"r": 0, "t": 0, "l": 0, "b": 0},
+                               uirevision='constant')
 
     @property
     def year(self):
@@ -30,7 +31,8 @@ class ChoroMap:
     @year.setter
     def year(self, val: int):
         self.__geo_json = self.get_geojson(year=val)
-        self.__data = data.data_by_county(year=val)
+        self.__data = db.get_region_data(columns=self.vars.map_var,
+                                         year=val)
         self.__district_lookup = self.get_district_lookup()
 
     @property
@@ -65,7 +67,7 @@ class ChoroMap:
         self.fig.add_choroplethmapbox(
             geojson=self.geo_json,
             z=self.data[self.vars.map_var],
-            locations=self.data["KoppelvariabeleRegioCode_306"],
+            locations=self.data["koppelvariabele_regio_code_306"],
             featureidkey="properties.statcode",
             marker=dict(opacity=0.3)
         )
@@ -83,7 +85,7 @@ class ChoroMap:
             self.fig.add_choroplethmapbox(
                 geojson=highlights,
                 z=self.data[self.vars.map_var],
-                locations=self.data["KoppelvariabeleRegioCode_306"],
+                locations=self.data["koppelvariabele_regio_code_306"],
                 featureidkey="properties.statcode",
                 marker=dict(opacity=0.8)
             )
@@ -91,14 +93,13 @@ class ChoroMap:
 
     def add_custom_data(self):
         """ Adds the custom data for the hover info. """
-        customdata_df = self.data[['TotaleBevolking_1',
-                                   'GemiddeldeWoningwaarde_99']].copy()
-        customdata_df['Gemeente'] = customdata_df.index
+        customdata_df = db.get_region_data(columns=['totale_bevolking_1', 'gemiddelde_woningwaarde_99', self.vars.map_var],
+                                           year=self.vars.map_var)
+        customdata_df['gemeente'] = customdata_df.index
         self.fig.update_traces(customdata=customdata_df,
-                          hovertemplate="Gemeente: %{customdata[2]}<br>" +
-                                        "Inwoners: %{customdata[0]}<br>" + \
-                                        "Gem. Woningwaarde: %{customdata[1]}<extra></extra>")
-
+                               hovertemplate="Gemeente: %{customdata[2]}<br>" +
+                                             "Inwoners: %{customdata[0]}<br>" + \
+                                             "Waarde: %{customdata[1]}<extra></extra>")
 
     # function to get the geojson file for highlighted area
     def get_highlights(self):
