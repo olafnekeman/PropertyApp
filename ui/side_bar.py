@@ -1,13 +1,13 @@
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
-from data.interface import data, DataInterface
+from data.interface import db
 from support.constants import COLOR
 from ui.runtime_vars import RuntimeVars
 
 
 # TODO: Change go.Scatter to go.FigureWidget for speed purposes
 class Subplot:
-    def __init__(self, data: DataInterface, runtime_vars: RuntimeVars,
+    def __init__(self, db: DataInterface, runtime_vars: RuntimeVars,
                  show_legend: bool = False):
         self.data = data
         self.vars = runtime_vars
