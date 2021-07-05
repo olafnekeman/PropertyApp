@@ -79,7 +79,7 @@ t0 = time.time()
  House Price Data
 ---------------------------------------------------------------------------- """
 data = db.get_region_data(col_str=", ".join(map_columns))
-
+data = data.sort_values(by='perioden')
 """ ----------------------------------------------------------------------------
  Geo Data
 ---------------------------------------------------------------------------- """
@@ -144,7 +144,7 @@ def get_figure(df, geo_data, geo_sectors):
     arg['z_vec'] = var
     arg['text_vec'] = 'regio_s'
     arg['colorscale'] = "Picnic"
-    arg['title'] = "Avg. Price %Change"
+    arg['title'] = "Gem. Prijsstijging (%)"
 
     # -------------------------------------------#
     # Main Choropleth:
@@ -345,7 +345,6 @@ def filter_countries(postcodes):
         return {}
 
     filtered = data.query('koppelvariabele_regio_code_306 in @postcodes')
-
     return filtered.to_dict('records')
 
 @app.callback(
