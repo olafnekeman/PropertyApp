@@ -3,6 +3,7 @@ import pandas as pd
 
 from data.pg_connect import Database
 from support.constants import BASEPATH
+from sqlalchemy import select
 
 
 class DatabaseInterface(Database):
@@ -41,21 +42,20 @@ class DatabaseInterface(Database):
         return self.data[cols].loc[
             (self.data['KoppelvariabeleRegioCode_306'] == county_code)]
 
-    def get_region_data(self, columns, year: int = None, region: str = None):
-        """ returns a DataFrame of the selected columns. """
+    def get_columns(self, col_str: str, year: int = None, region: str = None,
+                    distinct: bool = False):
+        """ Returns the columns from the regionale_kerncijfers table. """
+
         # Build start query
         query = """
-        SELECT id, regio_s, perioden, {column} koppelvariabele_regio_code_306
+        SELECT {column}
         FROM regionale_kerncijfers 
         WHERE type='region' """
 
         # Add columns
-        if type(columns) == str:
-            col_str = "{}, ".format(columns)
-        elif type(columns) == list:
-            col_str = ""
-            for col in columns:
-                col_str += "{}, ".format(col)
+        if distinct:
+            col_str = "DISTINCT " + col_str
+
         query = query.format(column=col_str)
 
         # Add year or region if variable is passed
@@ -69,9 +69,23 @@ class DatabaseInterface(Database):
 
         return data
 
+    def get_region_data(self, col_str: str , year: int = None, region: str = None,
+                        distinct: bool = False):
+        """ returns a DataFrame of the selected columns. """
+        base_columns = 'id, regio_s, perioden, {cols}, koppelvariabele_regio_code_306'
+
+        to_retrieve = base_columns.format(cols=col_str)
+
+        data = self.get_columns(col_str=to_retrieve, year=year, region=region,
+                                distinct=distinct)
+
+        return data
+
 
 db = DatabaseInterface()
 
 if __name__ == "__main__":
     df1 = db.get_region_data(columns="gemiddelde_woningwaarde_99", year=2020)
-    df2 = db.get_region_data(columns=["gemiddelde_woningwaarde_99", "oud_papier_en_karton_238"], region="Aa en Hunze")
+    df2 = db.get_region_data(
+        columns=["gemiddelde_woningwaarde_99", "oud_papier_en_karton_238"],
+        region="Aa en Hunze")

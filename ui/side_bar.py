@@ -7,14 +7,6 @@ from ui.runtime_vars import RuntimeVars
 
 # TODO: Change go.Scatter to go.FigureWidget for speed purposes
 class Subplot:
-    def __init__(self, db: DataInterface, runtime_vars: RuntimeVars,
-                 show_legend: bool = False):
-        self.data = data
-        self.vars = runtime_vars
-        self._parsed = set()
-        self.fig = go.FigureWidget()
-        self._subplot_var = ""
-        self.show_legend = show_legend
 
     @property
     def subplot_var(self):
